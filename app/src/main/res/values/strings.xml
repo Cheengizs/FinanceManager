@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">Finance Manager</string>
+
+    <string name="main_title">Главный экран</string>
+    <string name="btn_details">Детали</string>
+    <string name="btn_settings">Настройки</string>
+    <string name="details_title">Экран деталей</string>
+    <string name="settings_title">Экран настроек</string>
+    <string name="btn_back">Назад</string>
+    <string name="dark_theme">Темная тема</string>
+
+    <string name="current_balance">Текущий баланс</string>
+    <string name="transaction_history">История транзакций:</string>
+    <string name="new_transaction">Новая транзакция</string>
+    <string name="title_hint">Название (например, Кофе)</string>
+    <string name="amount_hint">Сумма</string>
+    <string name="date_hint">Дата</string>
+    <string name="income_plus">Доход (+)</string>
+    <string name="expense_minus">Расход (-)</string>
+    <string name="btn_save">Сохранить</string>
+    <string name="btn_cancel">Отмена</string>
+
+    <string name="type_income">ПОПОЛНЕНИЕ</string>
+    <string name="type_expense">ТРАТА</string>
+    <string name="operation_date">Дата операции: %1$s</string>
+    <string name="loading">Загрузка...</string>
+
+    <string name="delete_title">Удалить транзакцию?</string>
+    <string name="delete_confirm">Вы уверены, что хотите удалить эту транзакцию? Отменить это действие будет нельзя.</string>
+    <string name="btn_delete">Удалить</string>
+
+    <string name="edit_transaction">Редактировать транзакцию</string>
+</resources>
