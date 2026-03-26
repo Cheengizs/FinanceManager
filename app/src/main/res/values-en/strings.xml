@@ -30,4 +30,12 @@
     <string name="btn_delete">Delete</string>
 
     <string name="edit_transaction">Edit Transaction</string>
+
+    <string name="display_currency">Display Currency:</string>
+    <string name="currency">Currency</string>
+
+    <string name="offline_warning">⚠️ Offline (cached rates)</string>
+
+    <string name="online_status">Online</string>
+    <string name="offline_status">Offline</string>
 </resources>

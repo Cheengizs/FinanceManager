@@ -7,8 +7,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle // Иконка "В сети"
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit // Добавили иконку карандаша
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Warning // Иконка "Оффлайн"
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,14 +36,20 @@ fun SplashScreen(onNavigateToMain: () -> Unit) {
 @Composable
 fun MainScreen(
     dao: FinanceDao,
+    viewModel: FinanceViewModel,
     onNavigateToDetails: (Int) -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
+
     val items by dao.getAllItems().collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
+    val selectedCurrency by viewModel.selectedCurrency.collectAsState()
+    val currentRates by viewModel.rates.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState() // Следим за интернетом
 
-    val balance = items.sumOf { if (it.isIncome) it.amount else -it.amount }
-    val balanceColor = if (balance >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+    val balanceByn = items.sumOf { if (it.isIncome) it.amount else -it.amount }
+    val displayBalance = viewModel.convert(balanceByn)
+    val balanceColor = if (balanceByn >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
 
     val currentDate = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date()) }
 
@@ -50,17 +58,17 @@ fun MainScreen(
     var amountStr by remember { mutableStateOf("") }
     var isIncome by remember { mutableStateOf(false) }
     var date by remember { mutableStateOf(currentDate) }
+    var txCurrency by remember { mutableStateOf(selectedCurrency) }
 
-    // Переменные для отслеживания действий
     var itemToDelete by remember { mutableStateOf<TransactionItem?>(null) }
-    var itemToEdit by remember { mutableStateOf<TransactionItem?>(null) } // Для редактирования
+    var itemToEdit by remember { mutableStateOf<TransactionItem?>(null) }
 
-    // Функция для очистки полей
     fun resetFields() {
         title = ""
         amountStr = ""
         date = currentDate
         isIncome = false
+        txCurrency = selectedCurrency
         itemToEdit = null
         showDialog = false
     }
@@ -68,7 +76,7 @@ fun MainScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                resetFields() // Очищаем поля перед добавлением новой
+                resetFields()
                 showDialog = true
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
@@ -76,31 +84,50 @@ fun MainScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.End) {
+            // ВЕРХНЯЯ ПАНЕЛЬ: Индикатор сети слева, Настройки справа
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween, // Расталкиваем элементы по краям
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Блок с иконкой и текстом статуса сети
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isOnline) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = "Online", tint = Color(0xFF4CAF50))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(id = R.string.online_status), color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        Icon(Icons.Default.Warning, contentDescription = "Offline", tint = Color(0xFFF44336))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(id = R.string.offline_status), color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
                 Button(onClick = onNavigateToSettings) { Text(stringResource(id = R.string.btn_settings)) }
             }
 
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(stringResource(id = R.string.current_balance), fontSize = 18.sp, color = Color.Gray)
                 Text(
-                    text = String.format("%.2f ₽", balance),
+                    text = String.format("%.2f %s", displayBalance, selectedCurrency),
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold,
                     color = balanceColor
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            HorizontalDivider(modifier = Modifier.padding(16.dp))
 
-            Text(stringResource(id = R.string.transaction_history), fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
+            Text(stringResource(id = R.string.transaction_history), fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(items) { item ->
                     val itemColor = if (item.isIncome) Color(0xFF4CAF50) else Color(0xFFF44336)
                     val sign = if (item.isIncome) "+" else "-"
+                    val convertedAmount = viewModel.convert(item.amount)
 
                     Card(
                         modifier = Modifier
@@ -114,29 +141,27 @@ fun MainScreen(
                                 Text(text = item.date, color = Color.Gray, fontSize = 14.sp)
                             }
                             Text(
-                                text = "$sign${item.amount} ₽",
+                                text = String.format("%s%.2f %s", sign, convertedAmount, selectedCurrency),
                                 color = itemColor,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(end = 8.dp)
                             )
 
-                            // Кнопка РЕДАКТИРОВАТЬ
                             IconButton(
                                 onClick = {
-                                    itemToEdit = item // Запоминаем, что редактируем
-                                    // Заполняем поля старыми данными
+                                    itemToEdit = item
                                     title = item.title
                                     amountStr = item.amount.toString()
                                     date = item.date
                                     isIncome = item.isIncome
-                                    showDialog = true // Открываем окно
+                                    txCurrency = "BYN"
+                                    showDialog = true
                                 }
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray)
                             }
 
-                            // Кнопка УДАЛИТЬ
                             IconButton(onClick = { itemToDelete = item }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Gray)
                             }
@@ -147,11 +172,9 @@ fun MainScreen(
         }
     }
 
-    // ДИАЛОГ ДОБАВЛЕНИЯ / РЕДАКТИРОВАНИЯ
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { resetFields() },
-            // Меняем заголовок в зависимости от режима
             title = {
                 Text(if (itemToEdit == null) stringResource(id = R.string.new_transaction)
                 else stringResource(id = R.string.edit_transaction))
@@ -160,12 +183,39 @@ fun MainScreen(
                 Column {
                     OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(id = R.string.title_hint)) })
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = amountStr,
-                        onValueChange = { amountStr = it },
-                        label = { Text(stringResource(id = R.string.amount_hint)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = amountStr,
+                            onValueChange = { amountStr = it },
+                            label = { Text(stringResource(id = R.string.amount_hint)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        var txExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            TextButton(onClick = { txExpanded = true }) {
+                                Text(txCurrency)
+                            }
+                            DropdownMenu(expanded = txExpanded, onDismissRequest = { txExpanded = false }) {
+                                viewModel.currencies.forEach { currency ->
+                                    // Считаем стоимость валюты в BYN
+                                    val rateValue = currentRates[currency]
+                                    val rateText = if (currency == "BYN") "1.00 BYN"
+                                    else if (rateValue != null) String.format("%.2f BYN", 1.0 / rateValue)
+                                    else "? BYN"
+
+                                    DropdownMenuItem(
+                                        text = { Text("$currency ($rateText)") },
+                                        onClick = { txCurrency = currency; txExpanded = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(value = date, onValueChange = { date = it }, label = { Text(stringResource(id = R.string.date_hint)) })
                     Spacer(modifier = Modifier.height(16.dp))
@@ -183,14 +233,14 @@ fun MainScreen(
             confirmButton = {
                 Button(onClick = {
                     coroutineScope.launch {
-                        val amount = amountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                        if (title.isNotBlank() && amount > 0) {
+                        val inputAmount = amountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                        if (title.isNotBlank() && inputAmount > 0) {
+                            val amountByn = viewModel.convertToByn(inputAmount, txCurrency)
+
                             if (itemToEdit == null) {
-                                // Если создаем новую
-                                dao.insert(TransactionItem(title = title, amount = amount, isIncome = isIncome, date = date))
+                                dao.insert(TransactionItem(title = title, amount = amountByn, isIncome = isIncome, date = date))
                             } else {
-                                // Если редактируем старую (копируем ID из старой записи)
-                                dao.update(itemToEdit!!.copy(title = title, amount = amount, isIncome = isIncome, date = date))
+                                dao.update(itemToEdit!!.copy(title = title, amount = amountByn, isIncome = isIncome, date = date))
                             }
                             resetFields()
                         }
@@ -203,7 +253,6 @@ fun MainScreen(
         )
     }
 
-    // ДИАЛОГ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ
     itemToDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
@@ -227,12 +276,12 @@ fun MainScreen(
     }
 }
 
-// ... Экраны DetailsScreen и SettingsScreen остаются без изменений (они в порядке) ...
 @Composable
-fun DetailsScreen(itemId: Int, dao: FinanceDao, onNavigateBack: () -> Unit) {
+fun DetailsScreen(itemId: Int, dao: FinanceDao, viewModel: FinanceViewModel, onNavigateBack: () -> Unit) {
     val item by produceState<TransactionItem?>(initialValue = null) {
         value = dao.getItemById(itemId)
     }
+    val selectedCurrency by viewModel.selectedCurrency.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -242,12 +291,19 @@ fun DetailsScreen(itemId: Int, dao: FinanceDao, onNavigateBack: () -> Unit) {
         item?.let {
             val itemColor = if (it.isIncome) Color(0xFF4CAF50) else Color(0xFFF44336)
             val typeText = if (it.isIncome) stringResource(id = R.string.type_income) else stringResource(id = R.string.type_expense)
+            val convertedAmount = viewModel.convert(it.amount)
 
             Text(text = typeText, color = itemColor, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = it.title, fontSize = 32.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "${it.amount} ₽", fontSize = 48.sp, color = itemColor, fontWeight = FontWeight.Bold)
+
+            Text(
+                text = String.format("%.2f %s", convertedAmount, selectedCurrency),
+                fontSize = 48.sp,
+                color = itemColor,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(text = stringResource(id = R.string.operation_date, it.date), color = Color.Gray, fontSize = 18.sp)
@@ -259,7 +315,12 @@ fun DetailsScreen(itemId: Int, dao: FinanceDao, onNavigateBack: () -> Unit) {
 }
 
 @Composable
-fun SettingsScreen(isDarkTheme: Boolean, onThemeChange: (Boolean) -> Unit, onNavigateBack: () -> Unit) {
+fun SettingsScreen(
+    isDarkTheme: Boolean,
+    onThemeChange: (Boolean) -> Unit,
+    viewModel: FinanceViewModel,
+    onNavigateBack: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Text(text = stringResource(id = R.string.settings_title), fontSize = 24.sp)
         Spacer(modifier = Modifier.height(32.dp))
@@ -270,5 +331,37 @@ fun SettingsScreen(isDarkTheme: Boolean, onThemeChange: (Boolean) -> Unit, onNav
         }
         Spacer(modifier = Modifier.height(32.dp))
         Button(onClick = onNavigateBack) { Text(stringResource(id = R.string.btn_back)) }
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(stringResource(id = R.string.display_currency), fontSize = 18.sp)
+        val selectedCurrency by viewModel.selectedCurrency.collectAsState()
+        var expanded by remember { mutableStateOf(false) }
+        val currentRates by viewModel.rates.collectAsState()
+
+        Box(modifier = Modifier.padding(top = 8.dp)) {
+            Button(onClick = { expanded = true }) {
+                Text(selectedCurrency)
+            }
+            // ВЕРНУЛИ ПРОПАВШЕЕ МЕНЮ СЮДА:
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                viewModel.currencies.forEach { currency ->
+                    val rateValue = currentRates[currency]
+                    val rateText = if (currency == "BYN") "1.00 BYN"
+                    else if (rateValue != null) String.format("%.2f BYN", 1.0 / rateValue)
+                    else "? BYN"
+
+                    DropdownMenuItem(
+                        text = { Text("$currency ($rateText)") },
+                        onClick = {
+                            viewModel.changeCurrency(currency)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
     }
 }

@@ -30,4 +30,11 @@
     <string name="btn_delete">Удалить</string>
 
     <string name="edit_transaction">Редактировать транзакцию</string>
+
+    <string name="display_currency">Валюта отображения:</string>
+    <string name="currency">Валюта</string>
+    <string name="offline_warning">⚠️ Оффлайн (сохраненные курсы)</string>
+
+    <string name="online_status">В сети</string>
+    <string name="offline_status">Оффлайн</string>
 </resources>
