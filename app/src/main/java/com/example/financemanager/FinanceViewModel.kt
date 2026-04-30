@@ -3,15 +3,20 @@ package com.example.financemanager
 import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import android.net.Network
-import android.net.NetworkRequest
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+enum class SortType { DATE_DESC, DATE_ASC, AMOUNT_DESC, AMOUNT_ASC }
 
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
     val currencies = listOf("BYN", "USD", "EUR", "RUB", "CNY", "CHF", "GBP", "TRY", "KZT")
@@ -27,39 +32,104 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val _rates = MutableStateFlow<Map<String, Double>>(loadRatesFromCache())
     val rates = _rates.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    private val _sortType = MutableStateFlow(SortType.DATE_DESC)
+    val sortType = _sortType.asStateFlow()
+
+    private val _filterType = MutableStateFlow("ALL")
+    val filterType = _filterType.asStateFlow()
+
+    private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.getDefault())
+
     init {
         _isOnline.value = checkInitialNetwork()
-
         startNetworkMonitoring()
-
         if (_isOnline.value) {
             fetchRates()
         }
     }
 
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun updateSortType(type: SortType) {
+        _sortType.value = type
+    }
+
+    fun updateFilterType(type: String) {
+        _filterType.value = type
+    }
+
+    fun processItems(
+        items: List<TransactionItem>,
+        query: String,
+        sort: SortType,
+        filter: String
+    ): List<TransactionItem> {
+        var result = items
+
+        if (query.isNotBlank()) {
+            result = result.filter { it.title.contains(query, ignoreCase = true) }
+        }
+
+        result = when (filter) {
+            "INCOME" -> result.filter { it.isIncome }
+            "EXPENSE" -> result.filter { !it.isIncome }
+            else -> result
+        }
+
+        result = when (sort) {
+            SortType.DATE_DESC -> result.sortedByDescending {
+                parseDate(it.date)
+            }
+            SortType.DATE_ASC -> result.sortedBy {
+                parseDate(it.date)
+            }
+            SortType.AMOUNT_DESC -> result.sortedByDescending { it.amount }
+            SortType.AMOUNT_ASC -> result.sortedBy { it.amount }
+        }
+
+        return result
+    }
+
+    private fun parseDate(dateString: String): LocalDate {
+        return try {
+            LocalDate.parse(dateString, dateFormatter)
+        } catch (e: Exception) {
+            LocalDate.MIN
+        }
+    }
+
     private fun checkInitialNetwork(): Boolean {
-        val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager =
+            getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     private fun startNetworkMonitoring() {
-        val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager =
+            getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
 
-        connectivityManager.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                _isOnline.value = true
-                fetchRates()
-            }
+        connectivityManager.registerNetworkCallback(
+            request,
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    _isOnline.value = true
+                    fetchRates()
+                }
 
-            override fun onLost(network: Network) {
-                _isOnline.value = false
-            }
-        })
+                override fun onLost(network: Network) {
+                    _isOnline.value = false
+                }
+            })
     }
 
     private fun fetchRates() {

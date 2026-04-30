@@ -1,26 +1,28 @@
 package com.example.financemanager
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,14 +46,21 @@ fun MainScreen(
     onNavigateToDetails: (Int) -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
+    val context = LocalContext.current
 
-    val items by dao.getAllItems().collectAsState(initial = emptyList())
+    val rawItems by dao.getAllItems().collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
     val currentRates by viewModel.rates.collectAsState()
     val isOnline by viewModel.isOnline.collectAsState()
 
-    val balanceByn = items.sumOf { if (it.isIncome) it.amount else -it.amount }
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val sortType by viewModel.sortType.collectAsState()
+    val filterType by viewModel.filterType.collectAsState()
+
+    val items = viewModel.processItems(rawItems, searchQuery, sortType, filterType)
+
+    val balanceByn = rawItems.sumOf { if (it.isIncome) it.amount else -it.amount }
     val displayBalance = viewModel.convert(balanceByn)
     val balanceColor = if (balanceByn >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
 
@@ -64,9 +73,15 @@ fun MainScreen(
     var isIncome by remember { mutableStateOf(false) }
     var date by remember { mutableStateOf(currentDate) }
     var txCurrency by remember { mutableStateOf(selectedCurrency) }
+    var selectedImageUri by remember { mutableStateOf<String?>(null) }
 
     var itemToDelete by remember { mutableStateOf<TransactionItem?>(null) }
     var itemToEdit by remember { mutableStateOf<TransactionItem?>(null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri: Uri? -> selectedImageUri = uri?.toString() }
+    )
 
     fun resetFields() {
         title = ""
@@ -74,6 +89,7 @@ fun MainScreen(
         date = currentDate
         isIncome = false
         txCurrency = selectedCurrency
+        selectedImageUri = null
         itemToEdit = null
         showDialog = false
     }
@@ -99,35 +115,20 @@ fun MainScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isOnline) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = "Online",
-                            tint = Color(0xFF4CAF50)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(id = R.string.online_status),
-                            color = Color(0xFF4CAF50),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = "Offline",
-                            tint = Color(0xFFF44336)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(id = R.string.offline_status),
-                            color = Color(0xFFF44336),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Icon(
+                        if (isOnline) Icons.Default.CheckCircle else Icons.Default.Warning,
+                        contentDescription = "Status",
+                        tint = if (isOnline) Color(0xFF4CAF50) else Color(0xFFF44336)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        if (isOnline) stringResource(id = R.string.status_online) else stringResource(
+                            id = R.string.status_offline
+                        ),
+                        color = if (isOnline) Color(0xFF4CAF50) else Color(0xFFF44336),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-
                 Button(onClick = onNavigateToSettings) { Text(stringResource(id = R.string.btn_settings)) }
             }
 
@@ -144,20 +145,65 @@ fun MainScreen(
                 )
                 Text(
                     text = String.format("%.2f %s", displayBalance, selectedCurrency),
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = balanceColor
+                    fontSize = 40.sp, fontWeight = FontWeight.Bold, color = balanceColor
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.padding(16.dp))
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.updateSearchQuery(it) },
+                    label = { Text(stringResource(id = R.string.search_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") }
+                )
 
-            Text(
-                stringResource(id = R.string.transaction_history),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(onClick = { viewModel.updateSortType(SortType.DATE_DESC) }) {
+                        Text(
+                            stringResource(id = R.string.sort_new)
+                        )
+                    }
+                    TextButton(onClick = { viewModel.updateSortType(SortType.DATE_ASC) }) {
+                        Text(
+                            stringResource(id = R.string.sort_old)
+                        )
+                    }
+                    TextButton(onClick = { viewModel.updateSortType(SortType.AMOUNT_DESC) }) {
+                        Text(
+                            stringResource(id = R.string.sort_expensive)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    FilterChip(
+                        selected = filterType == "ALL",
+                        onClick = { viewModel.updateFilterType("ALL") },
+                        label = { Text(stringResource(id = R.string.filter_all)) }
+                    )
+                    FilterChip(
+                        selected = filterType == "INCOME",
+                        onClick = { viewModel.updateFilterType("INCOME") },
+                        label = { Text(stringResource(id = R.string.filter_income)) }
+                    )
+                    FilterChip(
+                        selected = filterType == "EXPENSE",
+                        onClick = { viewModel.updateFilterType("EXPENSE") },
+                        label = { Text(stringResource(id = R.string.filter_expense)) }
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(items) { item ->
@@ -182,6 +228,13 @@ fun MainScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(text = item.date, color = Color.Gray, fontSize = 14.sp)
+                                if (item.imageUrl != null) {
+                                    Text(
+                                        stringResource(id = R.string.photo_attached),
+                                        color = Color.Blue,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
                             Text(
                                 text = String.format(
@@ -190,30 +243,25 @@ fun MainScreen(
                                     convertedAmount,
                                     selectedCurrency
                                 ),
-                                color = itemColor,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
+                                color = itemColor, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(end = 8.dp)
                             )
-
-                            IconButton(
-                                onClick = {
-                                    itemToEdit = item
-                                    title = item.title
-                                    amountStr = item.amount.toString()
-                                    date = item.date
-                                    isIncome = item.isIncome
-                                    txCurrency = "BYN"
-                                    showDialog = true
-                                }
-                            ) {
+                            IconButton(onClick = {
+                                itemToEdit = item
+                                title = item.title
+                                amountStr = item.amount.toString()
+                                date = item.date
+                                isIncome = item.isIncome
+                                selectedImageUri = item.imageUrl
+                                txCurrency = "BYN"
+                                showDialog = true
+                            }) {
                                 Icon(
                                     Icons.Default.Edit,
                                     contentDescription = "Edit",
                                     tint = Color.Gray
                                 )
                             }
-
                             IconButton(onClick = { itemToDelete = item }) {
                                 Icon(
                                     Icons.Default.Delete,
@@ -233,22 +281,22 @@ fun MainScreen(
             onDismissRequest = { resetFields() },
             title = {
                 Text(
-                    if (itemToEdit == null) stringResource(id = R.string.new_transaction)
-                    else stringResource(id = R.string.edit_transaction)
+                    if (itemToEdit == null) stringResource(id = R.string.dialog_new_title) else stringResource(
+                        id = R.string.dialog_edit_title
+                    )
                 )
             },
             text = {
                 Column {
                     OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text(stringResource(id = R.string.title_hint)) })
+                        value = title, onValueChange = { title = it },
+                        label = { Text(stringResource(id = R.string.title_hint)) }
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
-                            value = amountStr,
-                            onValueChange = { amountStr = it },
+                            value = amountStr, onValueChange = { amountStr = it },
                             label = { Text(stringResource(id = R.string.amount_hint)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f)
@@ -257,45 +305,46 @@ fun MainScreen(
 
                         var txExpanded by remember { mutableStateOf(false) }
                         Box {
-                            TextButton(onClick = { txExpanded = true }) {
-                                Text(txCurrency)
-                            }
+                            TextButton(onClick = { txExpanded = true }) { Text(txCurrency) }
                             DropdownMenu(
                                 expanded = txExpanded,
                                 onDismissRequest = { txExpanded = false }) {
                                 viewModel.currencies.forEach { currency ->
-                                    val rateValue = currentRates[currency]
-                                    val rateText = if (currency == "BYN") "1.00 BYN"
-                                    else if (rateValue != null) String.format(
-                                        "%.2f BYN",
-                                        1.0 / rateValue
-                                    )
-                                    else "? BYN"
-
                                     DropdownMenuItem(
-                                        text = { Text("$currency ($rateText)") },
+                                        text = { Text(currency) },
                                         onClick = { txCurrency = currency; txExpanded = false }
                                     )
                                 }
                             }
                         }
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        label = { Text(stringResource(id = R.string.date_hint)) })
+                        value = date, onValueChange = { date = it },
+                        label = { Text(stringResource(id = R.string.date_hint)) }
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    Button(onClick = {
+                        photoPickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }) {
+                        Text(
+                            if (selectedImageUri == null) stringResource(id = R.string.btn_attach_photo) else stringResource(
+                                id = R.string.photo_ready
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             if (isIncome) stringResource(id = R.string.income_plus) else stringResource(
                                 id = R.string.expense_minus
                             ),
                             color = if (isIncome) Color(0xFF4CAF50) else Color(0xFFF44336),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
+                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)
                         )
                         Switch(checked = isIncome, onCheckedChange = { isIncome = it })
                     }
@@ -308,33 +357,67 @@ fun MainScreen(
                         if (title.isNotBlank() && inputAmount > 0) {
                             val amountByn = viewModel.convertToByn(inputAmount, txCurrency)
 
-                            if (itemToEdit == null) {
-                                dao.insert(
-                                    TransactionItem(
-                                        title = title,
-                                        amount = amountByn,
-                                        isIncome = isIncome,
-                                        date = date
+                            var finalImageUrl: String? = selectedImageUri
+
+                            if (selectedImageUri != null && selectedImageUri!!.startsWith("content://")) {
+                                try {
+                                    val uri = Uri.parse(selectedImageUri)
+                                    val bytes =
+                                        context.contentResolver.openInputStream(uri)?.readBytes()
+                                    val base64Image = android.util.Base64.encodeToString(
+                                        bytes,
+                                        android.util.Base64.NO_WRAP
                                     )
-                                )
-                            } else {
-                                dao.update(
-                                    itemToEdit!!.copy(
-                                        title = title,
-                                        amount = amountByn,
-                                        isIncome = isIncome,
-                                        date = date
+
+                                    val privateKey = "private_V2HUWL5M2TWjrJZqt3tLGASz8i4=:"
+                                    val authHeader = "Basic " + android.util.Base64.encodeToString(
+                                        privateKey.toByteArray(),
+                                        android.util.Base64.NO_WRAP
                                     )
-                                )
+
+                                    val response = ImageKitClient.api.uploadImage(
+                                        authHeader = authHeader,
+                                        fileBase64 = base64Image!!,
+                                        fileName = "receipt_${System.currentTimeMillis()}.jpg"
+                                    )
+
+                                    finalImageUrl = response.url
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
                             }
+
+                            val newItem = TransactionItem(
+                                id = itemToEdit?.id ?: 0,
+                                title = title,
+                                amount = amountByn,
+                                isIncome = isIncome,
+                                date = date,
+                                imageUrl = finalImageUrl
+                            )
+
+                            if (itemToEdit == null) dao.insert(newItem) else dao.update(newItem)
+
+                            try {
+                                val db = FirebaseFirestore.getInstance()
+                                val remoteData = hashMapOf(
+                                    "title" to newItem.title,
+                                    "amount" to newItem.amount,
+                                    "isIncome" to newItem.isIncome,
+                                    "date" to newItem.date,
+                                    "imageUrl" to newItem.imageUrl
+                                )
+                                db.collection("transactions").add(remoteData)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+
                             resetFields()
                         }
                     }
                 }) { Text(stringResource(id = R.string.btn_save)) }
             },
-            dismissButton = {
-                TextButton(onClick = { resetFields() }) { Text(stringResource(id = R.string.btn_cancel)) }
-            }
+            dismissButton = { TextButton(onClick = { resetFields() }) { Text(stringResource(id = R.string.btn_cancel)) } }
         )
     }
 
@@ -345,12 +428,7 @@ fun MainScreen(
             text = { Text(stringResource(id = R.string.delete_confirm)) },
             confirmButton = {
                 Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            dao.delete(item)
-                            itemToDelete = null
-                        }
-                    },
+                    onClick = { coroutineScope.launch { dao.delete(item); itemToDelete = null } },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
                 ) { Text(stringResource(id = R.string.btn_delete), color = Color.White) }
             },
@@ -395,17 +473,25 @@ fun DetailsScreen(
 
             Text(
                 text = String.format("%.2f %s", convertedAmount, selectedCurrency),
-                fontSize = 48.sp,
-                color = itemColor,
-                fontWeight = FontWeight.Bold
+                fontSize = 48.sp, color = itemColor, fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(24.dp))
-
             Text(
                 text = stringResource(id = R.string.operation_date, it.date),
                 color = Color.Gray,
                 fontSize = 18.sp
             )
+
+            it.imageUrl?.let { uri ->
+                Spacer(modifier = Modifier.height(24.dp))
+                AsyncImage(
+                    model = uri,
+                    contentDescription = "Receipt Image",
+                    modifier = Modifier
+                        .size(200.dp)
+                        .padding(8.dp)
+                )
+            }
         } ?: Text(stringResource(id = R.string.loading))
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -442,25 +528,12 @@ fun SettingsScreen(
         val currentRates by viewModel.rates.collectAsState()
 
         Box(modifier = Modifier.padding(top = 8.dp)) {
-            Button(onClick = { expanded = true }) {
-                Text(selectedCurrency)
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
+            Button(onClick = { expanded = true }) { Text(selectedCurrency) }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 viewModel.currencies.forEach { currency ->
-                    val rateValue = currentRates[currency]
-                    val rateText = if (currency == "BYN") "1.00 BYN"
-                    else if (rateValue != null) String.format("%.2f BYN", 1.0 / rateValue)
-                    else "? BYN"
-
                     DropdownMenuItem(
-                        text = { Text("$currency ($rateText)") },
-                        onClick = {
-                            viewModel.changeCurrency(currency)
-                            expanded = false
-                        }
+                        text = { Text(currency) },
+                        onClick = { viewModel.changeCurrency(currency); expanded = false }
                     )
                 }
             }

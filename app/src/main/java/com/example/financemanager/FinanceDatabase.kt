@@ -9,15 +9,14 @@ data class TransactionItem(
     val title: String,
     val amount: Double,
     val isIncome: Boolean,
-    val date: String
+    val date: String,
+    val imageUrl: String? = null
 )
-
 
 @Dao
 interface FinanceDao {
     @Query("SELECT * FROM transactions_table ORDER BY id DESC")
     fun getAllItems(): Flow<List<TransactionItem>>
-
 
     @Query("SELECT * FROM transactions_table WHERE id = :id")
     suspend fun getItemById(id: Int): TransactionItem?
@@ -32,7 +31,7 @@ interface FinanceDao {
     suspend fun delete(item: TransactionItem)
 }
 
-@Database(entities = [TransactionItem::class], version = 2, exportSchema = false)
+@Database(entities = [TransactionItem::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun financeDao(): FinanceDao
 }

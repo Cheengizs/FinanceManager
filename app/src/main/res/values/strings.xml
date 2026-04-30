@@ -1,40 +1,41 @@
 <resources>
-    <string name="app_name">Finance Manager</string>
-
-    <string name="main_title">Главный экран</string>
-    <string name="btn_details">Детали</string>
-    <string name="btn_settings">Настройки</string>
-    <string name="details_title">Экран деталей</string>
-    <string name="settings_title">Экран настроек</string>
-    <string name="btn_back">Назад</string>
-    <string name="dark_theme">Темная тема</string>
-
+    <string name="app_name">FinanceManager</string>
     <string name="current_balance">Текущий баланс</string>
-    <string name="transaction_history">История транзакций:</string>
-    <string name="new_transaction">Новая транзакция</string>
-    <string name="title_hint">Название (например, Кофе)</string>
+    <string name="status_online">В сети</string>
+    <string name="status_offline">Оффлайн</string>
+    <string name="search_hint">Поиск транзакций...</string>
+    <string name="sort_new">Новые</string>
+    <string name="sort_old">Старые</string>
+    <string name="sort_expensive">Дорогие</string>
+    <string name="photo_attached">📎 Прикреплено фото</string>
+    <string name="title_hint">Название</string>
     <string name="amount_hint">Сумма</string>
     <string name="date_hint">Дата</string>
-    <string name="income_plus">Доход (+)</string>
-    <string name="expense_minus">Расход (-)</string>
     <string name="btn_save">Сохранить</string>
     <string name="btn_cancel">Отмена</string>
-
-    <string name="type_income">ПОПОЛНЕНИЕ</string>
-    <string name="type_expense">ТРАТА</string>
-    <string name="operation_date">Дата операции: %1$s</string>
-    <string name="loading">Загрузка...</string>
-
-    <string name="delete_title">Удалить транзакцию?</string>
-    <string name="delete_confirm">Вы уверены, что хотите удалить эту транзакцию? Отменить это действие будет нельзя.</string>
+    <string name="btn_settings">Настройки</string>
     <string name="btn_delete">Удалить</string>
-
-    <string name="edit_transaction">Редактировать транзакцию</string>
-
-    <string name="display_currency">Валюта отображения:</string>
-    <string name="currency">Валюта</string>
-    <string name="offline_warning">⚠️ Оффлайн (сохраненные курсы)</string>
-
-    <string name="online_status">В сети</string>
-    <string name="offline_status">Оффлайн</string>
+    <string name="btn_back">Назад</string>
+    <string name="delete_title">Удалить транзакцию?</string>
+    <string name="delete_confirm">Вы уверены, что хотите удалить эту транзакцию? Это действие нельзя отменить.</string>
+    <string name="income_plus">Доход (+)</string>
+    <string name="expense_minus">Расход (-)</string>
+    <string name="type_income">Доход</string>
+    <string name="type_expense">Расход</string>
+    <string name="loading">Загрузка...</string>
+    <string name="operation_date">Дата: %s</string>
+    <string name="settings_title">Настройки</string>
+    <string name="dark_theme">Темная тема</string>
+    <string name="display_currency">Валюта отображения</string>
+    <string name="dialog_new_title">Новая транзакция</string>
+    <string name="dialog_edit_title">Редактировать</string>
+    <string name="btn_attach_photo">Прикрепить фото чека</string>
+    <string name="photo_ready">Фото прикреплено ✅</string>
+    <string name="notification_channel_name">Ежедневные напоминания</string>
+    <string name="notification_channel_desc">Напоминает о необходимости внести траты за день</string>
+    <string name="notification_title">Время записать расходы!</string>
+    <string name="notification_text">Зайдите в FinanceManager и добавьте свои сегодняшние траты.</string>
+    <string name="filter_all">Все</string>
+    <string name="filter_income">Доходы</string>
+    <string name="filter_expense">Расходы</string>
 </resources>
