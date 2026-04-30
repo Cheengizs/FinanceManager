@@ -7,10 +7,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle // Иконка "В сети"
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Warning // Иконка "Оффлайн"
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +29,11 @@ import java.util.Locale
 @Composable
 fun SplashScreen(onNavigateToMain: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = stringResource(id = R.string.app_name), fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = stringResource(id = R.string.app_name),
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -45,13 +49,14 @@ fun MainScreen(
     val coroutineScope = rememberCoroutineScope()
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
     val currentRates by viewModel.rates.collectAsState()
-    val isOnline by viewModel.isOnline.collectAsState() // Следим за интернетом
+    val isOnline by viewModel.isOnline.collectAsState()
 
     val balanceByn = items.sumOf { if (it.isIncome) it.amount else -it.amount }
     val displayBalance = viewModel.convert(balanceByn)
     val balanceColor = if (balanceByn >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
 
-    val currentDate = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date()) }
+    val currentDate =
+        remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date()) }
 
     var showDialog by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
@@ -83,23 +88,43 @@ fun MainScreen(
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // ВЕРХНЯЯ ПАНЕЛЬ: Индикатор сети слева, Настройки справа
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween, // Расталкиваем элементы по краям
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Блок с иконкой и текстом статуса сети
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isOnline) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = "Online", tint = Color(0xFF4CAF50))
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "Online",
+                            tint = Color(0xFF4CAF50)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(id = R.string.online_status), color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            stringResource(id = R.string.online_status),
+                            color = Color(0xFF4CAF50),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     } else {
-                        Icon(Icons.Default.Warning, contentDescription = "Offline", tint = Color(0xFFF44336))
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Offline",
+                            tint = Color(0xFFF44336)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(id = R.string.offline_status), color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            stringResource(id = R.string.offline_status),
+                            color = Color(0xFFF44336),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -107,10 +132,16 @@ fun MainScreen(
             }
 
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(stringResource(id = R.string.current_balance), fontSize = 18.sp, color = Color.Gray)
+                Text(
+                    stringResource(id = R.string.current_balance),
+                    fontSize = 18.sp,
+                    color = Color.Gray
+                )
                 Text(
                     text = String.format("%.2f %s", displayBalance, selectedCurrency),
                     fontSize = 40.sp,
@@ -121,7 +152,12 @@ fun MainScreen(
 
             HorizontalDivider(modifier = Modifier.padding(16.dp))
 
-            Text(stringResource(id = R.string.transaction_history), fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Text(
+                stringResource(id = R.string.transaction_history),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
 
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(items) { item ->
@@ -135,13 +171,25 @@ fun MainScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                             .clickable { onNavigateToDetails(item.id) }
                     ) {
-                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(text = item.title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = item.title,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Text(text = item.date, color = Color.Gray, fontSize = 14.sp)
                             }
                             Text(
-                                text = String.format("%s%.2f %s", sign, convertedAmount, selectedCurrency),
+                                text = String.format(
+                                    "%s%.2f %s",
+                                    sign,
+                                    convertedAmount,
+                                    selectedCurrency
+                                ),
                                 color = itemColor,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
@@ -159,11 +207,19 @@ fun MainScreen(
                                     showDialog = true
                                 }
                             ) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray)
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    tint = Color.Gray
+                                )
                             }
 
                             IconButton(onClick = { itemToDelete = item }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Gray)
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete",
+                                    tint = Color.Gray
+                                )
                             }
                         }
                     }
@@ -176,12 +232,17 @@ fun MainScreen(
         AlertDialog(
             onDismissRequest = { resetFields() },
             title = {
-                Text(if (itemToEdit == null) stringResource(id = R.string.new_transaction)
-                else stringResource(id = R.string.edit_transaction))
+                Text(
+                    if (itemToEdit == null) stringResource(id = R.string.new_transaction)
+                    else stringResource(id = R.string.edit_transaction)
+                )
             },
             text = {
                 Column {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(id = R.string.title_hint)) })
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text(stringResource(id = R.string.title_hint)) })
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -199,12 +260,16 @@ fun MainScreen(
                             TextButton(onClick = { txExpanded = true }) {
                                 Text(txCurrency)
                             }
-                            DropdownMenu(expanded = txExpanded, onDismissRequest = { txExpanded = false }) {
+                            DropdownMenu(
+                                expanded = txExpanded,
+                                onDismissRequest = { txExpanded = false }) {
                                 viewModel.currencies.forEach { currency ->
-                                    // Считаем стоимость валюты в BYN
                                     val rateValue = currentRates[currency]
                                     val rateText = if (currency == "BYN") "1.00 BYN"
-                                    else if (rateValue != null) String.format("%.2f BYN", 1.0 / rateValue)
+                                    else if (rateValue != null) String.format(
+                                        "%.2f BYN",
+                                        1.0 / rateValue
+                                    )
                                     else "? BYN"
 
                                     DropdownMenuItem(
@@ -217,11 +282,17 @@ fun MainScreen(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(value = date, onValueChange = { date = it }, label = { Text(stringResource(id = R.string.date_hint)) })
+                    OutlinedTextField(
+                        value = date,
+                        onValueChange = { date = it },
+                        label = { Text(stringResource(id = R.string.date_hint)) })
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (isIncome) stringResource(id = R.string.income_plus) else stringResource(id = R.string.expense_minus),
+                        Text(
+                            if (isIncome) stringResource(id = R.string.income_plus) else stringResource(
+                                id = R.string.expense_minus
+                            ),
                             color = if (isIncome) Color(0xFF4CAF50) else Color(0xFFF44336),
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f)
@@ -238,9 +309,23 @@ fun MainScreen(
                             val amountByn = viewModel.convertToByn(inputAmount, txCurrency)
 
                             if (itemToEdit == null) {
-                                dao.insert(TransactionItem(title = title, amount = amountByn, isIncome = isIncome, date = date))
+                                dao.insert(
+                                    TransactionItem(
+                                        title = title,
+                                        amount = amountByn,
+                                        isIncome = isIncome,
+                                        date = date
+                                    )
+                                )
                             } else {
-                                dao.update(itemToEdit!!.copy(title = title, amount = amountByn, isIncome = isIncome, date = date))
+                                dao.update(
+                                    itemToEdit!!.copy(
+                                        title = title,
+                                        amount = amountByn,
+                                        isIncome = isIncome,
+                                        date = date
+                                    )
+                                )
                             }
                             resetFields()
                         }
@@ -270,27 +355,37 @@ fun MainScreen(
                 ) { Text(stringResource(id = R.string.btn_delete), color = Color.White) }
             },
             dismissButton = {
-                TextButton(onClick = { itemToDelete = null }) { Text(stringResource(id = R.string.btn_cancel)) }
+                TextButton(onClick = {
+                    itemToDelete = null
+                }) { Text(stringResource(id = R.string.btn_cancel)) }
             }
         )
     }
 }
 
 @Composable
-fun DetailsScreen(itemId: Int, dao: FinanceDao, viewModel: FinanceViewModel, onNavigateBack: () -> Unit) {
+fun DetailsScreen(
+    itemId: Int,
+    dao: FinanceDao,
+    viewModel: FinanceViewModel,
+    onNavigateBack: () -> Unit
+) {
     val item by produceState<TransactionItem?>(initialValue = null) {
         value = dao.getItemById(itemId)
     }
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         item?.let {
             val itemColor = if (it.isIncome) Color(0xFF4CAF50) else Color(0xFFF44336)
-            val typeText = if (it.isIncome) stringResource(id = R.string.type_income) else stringResource(id = R.string.type_expense)
+            val typeText =
+                if (it.isIncome) stringResource(id = R.string.type_income) else stringResource(id = R.string.type_expense)
             val convertedAmount = viewModel.convert(it.amount)
 
             Text(text = typeText, color = itemColor, fontWeight = FontWeight.Bold)
@@ -306,7 +401,11 @@ fun DetailsScreen(itemId: Int, dao: FinanceDao, viewModel: FinanceViewModel, onN
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(text = stringResource(id = R.string.operation_date, it.date), color = Color.Gray, fontSize = 18.sp)
+            Text(
+                text = stringResource(id = R.string.operation_date, it.date),
+                color = Color.Gray,
+                fontSize = 18.sp
+            )
         } ?: Text(stringResource(id = R.string.loading))
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -321,7 +420,11 @@ fun SettingsScreen(
     viewModel: FinanceViewModel,
     onNavigateBack: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
         Text(text = stringResource(id = R.string.settings_title), fontSize = 24.sp)
         Spacer(modifier = Modifier.height(32.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -342,7 +445,6 @@ fun SettingsScreen(
             Button(onClick = { expanded = true }) {
                 Text(selectedCurrency)
             }
-            // ВЕРНУЛИ ПРОПАВШЕЕ МЕНЮ СЮДА:
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }

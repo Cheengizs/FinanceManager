@@ -6,8 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel // Важный импорт для ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
@@ -21,17 +22,16 @@ class MainActivity : ComponentActivity() {
         val sharedPreferences = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
 
         setContent {
-            var isDarkTheme by remember { mutableStateOf(sharedPreferences.getBoolean("isDarkTheme", false)) }
+            var isDarkTheme by rememberSaveable { mutableStateOf(sharedPreferences.getBoolean("isDarkTheme", false)) }
             val toggleTheme: (Boolean) -> Unit = { isDark ->
                 isDarkTheme = isDark
                 sharedPreferences.edit().putBoolean("isDarkTheme", isDark).apply()
             }
 
             val context = LocalContext.current
-            val db = remember { Room.databaseBuilder(context, AppDatabase::class.java, "finance_db").build() }
+            val db = rememberSaveable { Room.databaseBuilder(context, AppDatabase::class.java, "finance_db").build() }
             val dao = db.financeDao()
 
-            // Создаем наш "Мозг" (ViewModel) один раз для всего приложения
             val viewModel: FinanceViewModel = viewModel()
 
             FinanceManagerTheme(darkTheme = isDarkTheme) {
@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                         composable("main") {
                             MainScreen(
                                 dao = dao,
-                                viewModel = viewModel, // Передаем ViewModel
+                                viewModel = viewModel,
                                 onNavigateToDetails = { id -> navController.navigate("details/$id") },
                                 onNavigateToSettings = { navController.navigate("settings") }
                             )
@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
                             DetailsScreen(
                                 itemId = id,
                                 dao = dao,
-                                viewModel = viewModel, // Передаем ViewModel
+                                viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(
                                 isDarkTheme = isDarkTheme,
                                 onThemeChange = toggleTheme,
-                                viewModel = viewModel, // Передаем ViewModel
+                                viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }

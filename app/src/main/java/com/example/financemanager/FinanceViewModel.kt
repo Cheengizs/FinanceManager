@@ -13,39 +13,30 @@ import org.json.JSONObject
 import android.net.Network
 import android.net.NetworkRequest
 
-// Теперь наследуемся от AndroidViewModel, чтобы получить доступ к Context (для кэша и сети)
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
     val currencies = listOf("BYN", "USD", "EUR", "RUB", "CNY", "CHF", "GBP", "TRY", "KZT")
 
     private val _selectedCurrency = MutableStateFlow("BYN")
     val selectedCurrency = _selectedCurrency.asStateFlow()
 
-    // ПУНКТ 3: Мониторинг интернета
-    // 1. Изначально ставим false (на всякий случай)
     private val _isOnline = MutableStateFlow(false)
     val isOnline = _isOnline.asStateFlow()
 
-    // Инструмент для сохранения кэша
     private val prefs = application.getSharedPreferences("RatesCache", Context.MODE_PRIVATE)
 
-    // Изначально загружаем курсы из кэша
     private val _rates = MutableStateFlow<Map<String, Double>>(loadRatesFromCache())
     val rates = _rates.asStateFlow()
 
     init {
-        // 2. СРАЗУ проверяем сеть при запуске
         _isOnline.value = checkInitialNetwork()
 
-        // 3. Запускаем постоянный мониторинг
         startNetworkMonitoring()
 
-        // 4. Если интернет был со старта - качаем курсы
         if (_isOnline.value) {
             fetchRates()
         }
     }
 
-    // Одиночная проверка для момента запуска
     private fun checkInitialNetwork(): Boolean {
         val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
@@ -53,7 +44,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    // Слушаем интернет в реальном времени
     private fun startNetworkMonitoring() {
         val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val request = NetworkRequest.Builder()
@@ -63,7 +53,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         connectivityManager.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 _isOnline.value = true
-                fetchRates() // Интернет появился -> сразу качаем свежие курсы!
+                fetchRates()
             }
 
             override fun onLost(network: Network) {
@@ -73,7 +63,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun fetchRates() {
-        // Качаем только если мы уверены, что сеть есть
         if (_isOnline.value) {
             viewModelScope.launch {
                 try {
@@ -87,17 +76,15 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Сохранение в локальный кэш (SharedPreferences)
     private fun saveRatesToCache(rates: Map<String, Double>) {
         val json = JSONObject(rates).toString()
         prefs.edit().putString("saved_rates", json).apply()
     }
 
-    // Загрузка из локального кэша
     private fun loadRatesFromCache(): Map<String, Double> {
         val jsonString = prefs.getString("saved_rates", null) ?: return mapOf(
             "BYN" to 1.0, "USD" to 0.31, "EUR" to 0.28, "RUB" to 28.5
-        ) // Фолбэк, если приложение запущено впервые без интернета
+        )
 
         val json = JSONObject(jsonString)
         val map = mutableMapOf<String, Double>()

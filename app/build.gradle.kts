@@ -39,10 +39,8 @@ android {
 }
 
 dependencies {
-    // Работа с сетью
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    // Архитектура MVVM
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
     implementation("androidx.core:core-ktx:1.12.0")
@@ -56,7 +54,6 @@ dependencies {
 
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // База данных Room
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
