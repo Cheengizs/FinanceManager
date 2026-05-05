@@ -1,4 +1,4 @@
-package com.example.financemanager
+package com.example.financemanager.data.remote
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

@@ -5,19 +5,36 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.*
-import androidx.navigation.navArgument
-import androidx.room.Room
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.work.*
-import kotlinx.coroutines.delay
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.room.Room
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Worker
+import androidx.work.WorkerParameters
+import com.example.financemanager.data.local.AppDatabase
+import com.example.financemanager.ui.screens.AuthScreen
+import com.example.financemanager.ui.screens.DetailsScreen
+import com.example.financemanager.ui.screens.MainScreen
+import com.example.financemanager.ui.screens.SettingsScreen
+import com.example.financemanager.ui.screens.SplashScreen
 import com.example.financemanager.ui.theme.FinanceManagerTheme
+import com.example.financemanager.viewmodel.FinanceViewModel
 import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
@@ -57,15 +74,34 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = "splash") {
 
                         composable("splash") {
-                            SplashScreen(onNavigateToMain = {})
-                            LaunchedEffect(Unit) {
-                                delay(2000)
-                                navController.navigate("main") {
-                                    popUpTo("splash") {
-                                        inclusive = true
+                            SplashScreen(
+                                onNavigateToMain = {
+                                    navController.navigate("main") {
+                                        popUpTo("splash") {
+                                            inclusive = true
+                                        }
+                                    }
+                                },
+                                onNavigateToAuth = {
+                                    navController.navigate("auth") {
+                                        popUpTo("splash") {
+                                            inclusive = true
+                                        }
                                     }
                                 }
-                            }
+                            )
+                        }
+
+                        composable("auth") {
+                            AuthScreen(
+                                onAuthSuccess = {
+                                    navController.navigate("main") {
+                                        popUpTo("auth") {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
+                            )
                         }
 
                         composable("main") {
@@ -78,9 +114,9 @@ class MainActivity : ComponentActivity() {
 
                         composable(
                             "details/{itemId}",
-                            arguments = listOf(navArgument("itemId") { type = NavType.IntType })
+                            arguments = listOf(navArgument("itemId") { type = NavType.StringType })
                         ) { backStackEntry ->
-                            val id = backStackEntry.arguments?.getInt("itemId") ?: 0
+                            val id = backStackEntry.arguments?.getString("itemId") ?: ""
                             DetailsScreen(
                                 itemId = id,
                                 dao = dao,
@@ -93,7 +129,14 @@ class MainActivity : ComponentActivity() {
                                 isDarkTheme = isDarkTheme,
                                 onThemeChange = toggleTheme,
                                 viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() })
+                                dao = dao,
+                                onNavigateBack = { navController.popBackStack() },
+                                onLogout = {
+                                    navController.navigate("auth") {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -104,7 +147,7 @@ class MainActivity : ComponentActivity() {
 
 fun scheduleDailyReminder(context: Context) {
     val testWorkRequest =
-        OneTimeWorkRequestBuilder<ReminderWorker>().setInitialDelay(20, TimeUnit.SECONDS).build()
+        OneTimeWorkRequestBuilder<ReminderWorker>().setInitialDelay(10, TimeUnit.SECONDS).build()
     WorkManager.getInstance(context).enqueue(testWorkRequest)
 
     val dailyWorkRequest = PeriodicWorkRequestBuilder<ReminderWorker>(24, TimeUnit.HOURS).build()

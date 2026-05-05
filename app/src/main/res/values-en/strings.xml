@@ -38,4 +38,20 @@
     <string name="filter_all">All</string>
     <string name="filter_income">Income</string>
     <string name="filter_expense">Expenses</string>
+    <string name="auth_login_title">Login</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_error_login">Login failed. Check your credentials.</string>
+    <string name="auth_btn_login">Sign In</string>
+    <string name="auth_error_register">Registration failed.</string>
+    <string name="auth_btn_register">Sign Up</string>
+    <string name="error_no_internet_read_only">Action unavailable offline. Read-only mode.</string>
+    <string name="error_cloud_save">Error saving to cloud.</string>
+    <string name="auth_title_login">Welcome Back!</string>
+    <string name="auth_title_register">Create Account</string>
+    <string name="auth_switch_to_register">Don\'t have an account? Sign Up</string>
+    <string name="auth_switch_to_login">Already have an account? Sign In</string>
+    <string name="btn_logout">Logout</string>
+    <string name="btn_get_location">📍 Where am I?</string>
+    <string name="location_ready">📍 Location defined</string>
 </resources>

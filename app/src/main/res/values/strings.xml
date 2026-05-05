@@ -38,4 +38,20 @@
     <string name="filter_all">Все</string>
     <string name="filter_income">Доходы</string>
     <string name="filter_expense">Расходы</string>
+    <string name="auth_login_title">Вход в систему</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Пароль</string>
+    <string name="auth_error_login">Ошибка входа. Проверьте данные.</string>
+    <string name="auth_btn_login">Войти</string>
+    <string name="auth_error_register">Ошибка регистрации.</string>
+    <string name="auth_btn_register">Регистрация</string>
+    <string name="error_no_internet_read_only">Действие недоступно без интернета. Режим чтения.</string>
+    <string name="error_cloud_save">Ошибка сохранения в облако.</string>
+    <string name="auth_title_login">С возвращением!</string>
+    <string name="auth_title_register">Создать аккаунт</string>
+    <string name="auth_switch_to_register">Нет аккаунта? Зарегистрируйтесь</string>
+    <string name="auth_switch_to_login">Уже есть аккаунт? Войти</string>
+    <string name="btn_logout">Выйти из аккаунта</string>
+    <string name="btn_get_location">📍 Где я?</string>
+    <string name="location_ready">📍 Место определено</string>
 </resources>
